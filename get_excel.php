@@ -26,7 +26,7 @@ function readFromExcel($name)
     return $sheetData;
 }
 
-function writeToExcel($name,$row,$column,$data){
+function writeByIndex($name,$row,$column,$data){
     $inputFileName = './' . $name . '.xlsx';
 
     $objPHPExcel = PHPExcel_IOFactory::load($inputFileName);
@@ -35,6 +35,14 @@ function writeToExcel($name,$row,$column,$data){
 
     $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
     $objWriter->save('./'.$name.'.xlsx');
+}
+//拆分字符串后，写入
+function write($name,$seq,$lost_column,$lost_content){
+    $column_list = explode(",",$lost_column);
+    $content_list = explode(",",$lost_content);
+    foreach ($column_list as $index=>$column_index){
+        writeByIndex($name,$column_index,$seq,$content_list[$index]);
+    }
 }
 
 function sendMail($tomail, $title, $content)
@@ -74,8 +82,77 @@ function sendMail($tomail, $title, $content)
 function updateInfo(){
 
 }
+function getRandChar($length){
+    $str = null;
+    $strPol = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
+    $max = strlen($strPol)-1;
 
-writeToExcel("hello","C",1,"lisa@C1");
+    for($i=0;$i<$length;$i++){
+        $str.=$strPol[rand(0,$max)];//rand($min,$max)生成介于min和max两个数之间的一个随机整数
+    }
+
+    return $str;
+}
+// search from database
+function searchFromDB(){
+
+    $link = mysqli_connect('localhost','root','','excel_db');
+    if (!$link){
+        printf("不能连接到MySQL. 错误代码: %sn", mysqli_connect_error());
+        exit;
+    }
+
+    if ($result = mysqli_query($link, 'SELECT id, lost_content FROM lost_table LIMIT 5')){
+
+        while( $row = mysqli_fetch_assoc($result) ){
+            echo $row['id'].$row['lost_content'].'<br>';
+        }
+        mysqli_free_result($result);//注销结果集。释放内存
+    }
+    mysqli_close($link); //关闭连接
+
+}
+function insertRecord($seq,$lost_column,$lost_content,$token){
+    $link = mysqli_connect('localhost','root','','excel_db');
+    if (!$link){
+        printf("不能连接到MySQL. 错误代码: %sn", mysqli_connect_error());
+        exit;
+    }
+    if(mysqli_query($link, "INSERT into lost_table(seq,lost_column,lost_content,token) values('$seq','$lost_column','$lost_content','$token')")){
+        printf("插入新记录成功！\n");
+
+    }
+
+    mysqli_close($link); //关闭连接
+}
+//返回的结果是否和原来的token匹配
+function isTokenMatched($id,$token){
+    $link = mysqli_connect('localhost','root','','excel_db');
+    if (!$link){
+        printf("不能连接到MySQL. 错误代码: %sn", mysqli_connect_error());
+        exit;
+    }
+
+    if($result = mysqli_query($link, "SELECT token FROM lost_table WHERE id='$id'")){
+        $token_search = mysqli_fetch_array($result)['token'];
+        if($token_search == $token){
+            return true;
+        }else{
+            return false;
+        }
+
+    }else{
+        return false;
+    }
+
+
+    mysqli_close($link); //关闭连接
+}
+write("hello",2,"A,C,D","HiA,hiC,hiD");
+//insertRecord(3,"3,5","aligado,gozayi",getRandChar(7));
+//isTokenMatched(2,"efe");
+//searchFromDB();
+//writeToExcel("hello","C",1,"lisa@C1");
 //sendMail("383015311@qq.com", "lisa title", "lisa content");
 $sheetdata = readFromExcel("hello");
 foreach ($sheetdata as $data_index => $data_item) {
