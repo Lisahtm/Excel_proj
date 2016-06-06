@@ -16,7 +16,7 @@ include 'lib/PHPExcel/IOFactory.php';
 
 function readFromExcel($name)
 {
-    $inputFileName = './' . $name . '.xlsx';
+    $inputFileName =  $name;
 
     $objPHPExcel = PHPExcel_IOFactory::load($inputFileName);
 
@@ -56,7 +56,7 @@ function sendMail($tomail, $title, $content)
     $mail->From = "hangtianmenglisa@163.com";      // 发件人邮箱
     $mail->FromName =  "Lisa";  // 发件人
 
-    $mail->CharSet = "GB2312";   // 这里指定字符集！
+    $mail->CharSet = "UTF-8";   // 这里指定字符集！
     $mail->Encoding = "base64";
     $mail->AddAddress($tomail,"name");  // 收件人邮箱和姓名
     $mail->IsHTML(true);  // send as HTML
@@ -74,7 +74,6 @@ function sendMail($tomail, $title, $content)
     else {
         echo " 邮件成功发送给",$tomail,"<br />";
     }
-
 
 }
 
@@ -112,6 +111,7 @@ function searchFromDB(){
     mysqli_close($link); //关闭连接
 
 }
+//返回一条完整记录
 function insertRecord($seq,$lost_column,$lost_content,$token){
     $link = mysqli_connect('localhost','root','','excel_db');
     if (!$link){
@@ -119,10 +119,50 @@ function insertRecord($seq,$lost_column,$lost_content,$token){
         exit;
     }
     if(mysqli_query($link, "INSERT into lost_table(seq,lost_column,lost_content,token) values('$seq','$lost_column','$lost_content','$token')")){
-        printf("插入新记录成功！\n");
+        $newId = mysqli_insert_id($link);
+        echo "id=",$newId,"插入记录成功<br />";
+        if($obj = mysqli_query($link,"SELECT * FROM lost_table where id=$newId")){
+            $result = mysqli_fetch_array($obj);
+        }else{
+            echo "查询新插入数据失败\n";
+            $result = null;
+        }
+        mysqli_close($link);
+        return $result;
+
+    }else{
+        printf("插入新记录失败！\n");
 
     }
-
+    mysqli_close($link); //关闭连接
+    return null;
+}
+//邮件发送次数增加
+function addSentTimes($id){
+    $link = mysqli_connect('localhost','root','','excel_db');
+    if (!$link){
+        printf("不能连接到MySQL. 错误代码: %sn", mysqli_connect_error());
+        exit;
+    }
+    if(mysqli_query($link, "UPDATE lost_table SET send_times=send_times+1 WHERE id='$id'")){
+        echo "times add successfully"."</br>";
+    }else{
+        echo "times add failed"."</br>";
+    }
+    mysqli_close($link); //关闭连接
+}
+//用户已提交信息
+function hasUpdated($id){
+    $link = mysqli_connect('localhost','root','','excel_db');
+    if (!$link){
+        printf("不能连接到MySQL. 错误代码: %sn", mysqli_connect_error());
+        exit;
+    }
+    if(mysqli_query($link, "UPDATE lost_table SET is_update=1 WHERE id='$id'")){
+        echo "update add successfully"."</br>";
+    }else{
+        echo "update add failed"."</br>";
+    }
     mysqli_close($link); //关闭连接
 }
 //返回的结果是否和原来的token匹配
@@ -148,24 +188,26 @@ function isTokenMatched($id,$token){
 
     mysqli_close($link); //关闭连接
 }
-write("hello",2,"A,C,D","HiA,hiC,hiD");
+
+//write("hello",2,"A,C,D","HiA,hiC,hiD");
 //insertRecord(3,"3,5","aligado,gozayi",getRandChar(7));
 //isTokenMatched(2,"efe");
 //searchFromDB();
 //writeToExcel("hello","C",1,"lisa@C1");
-//sendMail("383015311@qq.com", "lisa title", "lisa content");
-$sheetdata = readFromExcel("hello");
-foreach ($sheetdata as $data_index => $data_item) {
-    foreach ($data_item as $attr_index => $attr_item) {
-        if (is_null($attr_item)) {
-            echo "空 ";
-        } else {
-            echo $attr_item . " ";
-        }
-
-    }
-    echo "<br>";
-}
+//sendMail("hangtianmenglisa@gmail.com", "快点修改", "这只是测试");
+//$sheetdata = readFromExcel("hello");
+//var_dump($sheetdata);
+//foreach ($sheetdata as $data_index => $data_item) {
+//    foreach ($data_item as $attr_index => $attr_item) {
+//        if (is_null($attr_item)) {
+//            echo "空 ";
+//        } else {
+//            echo $attr_index.$attr_item . " ";
+//        }
+//
+//    }
+//    echo "<br>";
+//}
 
 
 ?>
